@@ -44,13 +44,6 @@ openssl x509 -req \
   -days 3650 \
   -sha256
 
-
-chmod 644 mosquitto/config/certs/server.key
-chmod 644 mosquitto/config/certs/ca.key
-chmod 644 mosquitto/config/certs/ca.crt
-
- # Add the initial user 
+# Workaround for permissions issue with Docker volume mounts on macOS
+chmod 644 mosquitto/config/certs/*.key
  
-docker exec -it mosquitto rm -f /mosquitto/config/passwd
-docker run --rm -v "$(pwd)/mosquitto/config:/mosquitto/config" eclipse-mosquitto:1.6 \
-  mosquitto_passwd -c -b /mosquitto/config/passwd "$MOSQUITTO_USERNAME" "$MOSQUITTO_PASSWORD"

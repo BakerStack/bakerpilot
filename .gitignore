@@ -1,9 +1,12 @@
-/mosquitto/config/certs/
+/mosquitto/config/certs
 /mosquitto/log
 /mosquitto/data
+mosquitto/config/passwd
 settings.sh
 # add all influxdb and grafana files that are produced in runtime, but keep the config files            
  
 influxdb/data
- 
- 
+influxdb/meta
+influxdb/wal 
+ grafana/alerting
+ grafana/grafana.db

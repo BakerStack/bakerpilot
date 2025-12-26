@@ -80,7 +80,7 @@ or if you run on mac
 brew install mosquitto openssl
 ```
 
-### 3.2 Environment and secrets
+### 3.2 Environment and settings
 
 You must have:
 
@@ -96,7 +96,7 @@ To run the test scripts in python you need
 ```bash
 conda env create -f environment.yml
 conda activate bakerpilot-test
-````
+```
 
 ## 4. Common operational commands
 
