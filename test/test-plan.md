@@ -288,12 +288,16 @@ Go to influx db and check if we got anything
 Choose a topic that Telegraf subscribes to (adjust the topic to match your config). Example:
 
 ```bash
-mosquitto_pub \
-  -h localhost -p 8883 \
-  --cafile mosquitto/config/certs/ca.crt \
-  -u "$MOSQUITTO_USERNAME" -P "$MOSQUITTO_PASSWORD" \
-  -t "test/device01/metrics/temp" -m '{"value":23.7}'"
-
+ mosquitto_pub \                  
+  -h localhost \
+  -p 8883 \
+  --cafile ./mosquitto/config/certs/ca.crt \
+  --tls-version tlsv1.2 \
+  --insecure \
+  -u "$MOSQUITTO_USERNAME" \
+  -P "$MOSQUITTO_PASSWORD" \
+  -t "test/device01/metrics/temp" \
+  -m '{"value":28.7}'
 ```
 
 Expected:
@@ -333,7 +337,7 @@ Expected: at least one measurement created by Telegraf once messages are ingeste
 If you know the measurement name, query recent points. Example:
 
 ```sql
-SELECT * FROM mqtt_consumer ORDER BY time DESC LIMIT 10
+SELECT * FROM uns_metric ORDER BY time DESC LIMIT 10
 ```
 
 If you do not know the measurement name, list measurements and pick the relevant one.
