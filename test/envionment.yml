@@ -1,0 +1,12 @@
+name: bakerpilot-test
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - openssl
+  - ca-certificates
+  - pip:
+      - paho-mqtt
+      - rich        # optional, for nice CLI output
+      - python-dotenv  # if you load secrets

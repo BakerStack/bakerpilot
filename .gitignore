@@ -1,0 +1,9 @@
+/mosquitto/config/certs/
+/mosquitto/log
+/mosquitto/data
+settings.sh
+# add all influxdb and grafana files that are produced in runtime, but keep the config files            
+ 
+influxdb/data
+ 
+ 

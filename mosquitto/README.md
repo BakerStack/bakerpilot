@@ -1,0 +1,62 @@
+# Mosquitto TLS and Authentication
+
+## MQTT TLS Certificates (Mosquitto)
+
+BakerPilot uses TLS to secure all MQTT communication between devices (LoafOS nodes) and the control plane.
+Mosquitto is configured with a private Certificate Authority (CA) that signs the broker certificate and all device certificates.
+
+### Required files
+
+| File | Used by | Purpose |
+|------|--------|---------|
+| ca.crt | Mosquitto and all devices | Root certificate that signs everything |
+| server.crt | Mosquitto | TLS certificate for the MQTT broker |
+| server.key | Mosquitto | Private key for the broker certificate |
+
+These files must be placed in:
+
+    mosquitto/config/certs/
+
+And referenced in `mosquitto.conf` as:
+    
+        cafile   /mosquitto/config/certs/ca.crt
+        certfile /mosquitto/config/certs/server.crt
+        keyfile  /mosquitto/config/certs/server.key
+
+###   Generate certificates
+Run the script `bakerpilot/setup_scripts/mqtt_cert_and_user_setup.sh`
+ 
+
+### Devices
+Devices only need `ca.crt` to verify the broker.
+For mutual TLS generate per-device certs using the same CA.
+
+## MQTT Authentication (Mosquitto)
+
+BakerPilot uses username/password authentication in addition to TLS to protect the MQTT broker against unauthorized publishers and subscribers.
+
+Authentication is enforced via Mosquitto’s password file:
+
+        mosquitto/config/passwd
+
+This file is not stored in git and must be generated per installation.
+
+`mosquitto.conf` must contain:
+
+    password_file /mosquitto/config/passwd
+    allow_anonymous false
+
+### Creating the password file
+The initial user is created by the setup script above but as you add experimental or real devices you will need more users
+
+Add more users:
+
+    mosquitto_passwd passwd device01
+    mosquitto_passwd passwd device02
+
+### Using authentication
+
+All MQTT clients must authenticate using the configured username and password.
+
+Example:
+    mosquitto_pub -h localhost -p 8883 --cafile mosquitto/config/certs/ca.crt -u $MOSQUITTO_USERNAME -P $MOSQUITTO_PASSWORD -t bringup/test -m 1
