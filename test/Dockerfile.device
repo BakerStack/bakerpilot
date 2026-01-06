@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    openssl \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir paho-mqtt rich
+
+WORKDIR /app
+COPY device/ ./device/
+
+# Stay alive so we can exec tests into it
+CMD ["python", "-c", "import time; print('TestBug ready'); time.sleep(10**9)"]

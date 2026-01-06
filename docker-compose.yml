@@ -1,23 +1,19 @@
 services:
 
-  ###############################################################################
-  # MOSQUITTO (ARM64 OK)
-  ###############################################################################
   mosquitto:
     image: eclipse-mosquitto:1.6
     container_name: mosquitto
     restart: unless-stopped
     ports:
-      - "1883:1883" 
+      - "1883:1883"
       - "8883:8883"
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
+      - ${CERT_ROOT}/ca:/mosquitto/certs/ca:ro
+      - ${CERT_ROOT}/services/mosquitto:/mosquitto/certs/server:ro
 
-  ###############################################################################
-  # INFLUXDB (ARM64 OK)
-  ###############################################################################
   influxdb:
     image: influxdb:1.8
     container_name: influxdb
@@ -27,21 +23,26 @@ services:
       INFLUXDB_ADMIN_USER: ${INFLUXDB_ADMIN_USER:-admin}
       INFLUXDB_ADMIN_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD:-admin}
       INFLUXDB_USER: ${INFLUXDB_USER:-telegraf}
-      INFLUXDB_USER_PASSWORD: ${INFLUXDB_PASSWORD:-metricsmetricsmetrics}    
+      INFLUXDB_USER_PASSWORD: ${INFLUXDB_PASSWORD:-metricsmetricsmetrics}
+      INFLUXDB_HTTP_HTTPS_ENABLED: "true"
+      INFLUXDB_HTTP_HTTPS_CERTIFICATE: /etc/ssl/bakerlabs/server/influxdb.pem
+      INFLUXDB_HTTP_HTTPS_PRIVATE_KEY: /etc/ssl/bakerlabs/server/influxdb.key
+      INFLUXDB_HTTP_HTTPS_CA_CERTIFICATE: /etc/ssl/bakerlabs/ca/ca.pem
     ports:
       - "8086:8086"
     volumes:
-   #   - ./influxdb:/var/lib/influxdb
       - ${INFLUX_DB_DATA}:/var/lib/influxdb
-  ###############################################################################
-  # TELEGRAF (ARM64 OK)
-  ###############################################################################
+      - ${CERT_ROOT}/ca:/etc/ssl/bakerlabs/ca:ro
+      - ${CERT_ROOT}/services/influxdb:/etc/ssl/bakerlabs/server:ro
+
   telegraf:
     image: telegraf:1.30
     container_name: telegraf
     restart: unless-stopped
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${CERT_ROOT}/ca:/etc/ssl/bakerlabs/ca:ro
+      - ${CERT_ROOT}/services/telegraf:/etc/ssl/bakerlabs/client:ro
     environment:
       MOSQUITTO_USERNAME: ${MOSQUITTO_USERNAME}
       MOSQUITTO_PASSWORD: ${MOSQUITTO_PASSWORD}
@@ -49,23 +50,84 @@ services:
       - mosquitto
       - influxdb
 
-  ###############################################################################
-  # GRAFANA (ARM64 OK)
-  ###############################################################################
   grafana:
     image: grafana/grafana:10.4.3
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"  
+      - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_AUTH_ANONYMOUS_ENABLED: "false"    
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./grafana:/var/lib/grafana
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - ./grafana/provisioning:/etc/grafana/provisioning
+      - ${CERT_ROOT}/ca:/etc/ssl/bakerlabs/ca:ro
+      - ${CERT_ROOT}/services/grafana:/etc/ssl/bakerlabs/server:ro
 
-  
+  testbug-1:
+    build:
+      context: ./test
+      dockerfile: Dockerfile.device
+    container_name: testbug-1
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - telegraf
+      - influxdb
+    environment:
+      DEVICE: bakerbug-1
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 8883
+      CERT_ROOT: /etc/ssl/bakerlabs
+      TOPIC: test/bakerbug-1/metrics/temp
+    volumes:
+      - ${CERT_ROOT}/ca:/etc/ssl/bakerlabs/ca:ro
+      - ${CERT_ROOT}/devices/testbug-1:/etc/ssl/bakerlabs/device:ro
+      - ./test:/app:ro
+
+  testbug-2:
+    build:
+      context: ./test
+      dockerfile: Dockerfile.device
+    container_name: testbug-2
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - telegraf
+      - influxdb
+    environment:
+      DEVICE: bakerbug-2
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 8883
+      CERT_ROOT: /etc/ssl/bakerlabs
+      TOPIC: test/bakerbug-2/metrics/temp
+    volumes:
+      - ${CERT_ROOT}/ca:/etc/ssl/bakerlabs/ca:ro
+      - ${CERT_ROOT}/devices/testbug-2:/etc/ssl/bakerlabs/device:ro
+      - ./test:/app:ro
+
+  bakerprobe:
+    build:
+      context: ./test
+      dockerfile: Dockerfile.app
+    container_name: bakerprobe
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - influxdb
+      - telegraf
+    environment:
+      SERVICE: bakerprobe
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 8883
+      CERT_ROOT: /etc/ssl/bakerlabs
+      INFLUX_URL: https://influxdb:8086
+      INFLUX_DB: telemetry
+    volumes:
+      - ${CERT_ROOT}/ca:/etc/ssl/bakerlabs/ca:ro
+      - ${CERT_ROOT}/services/bakerprobe:/etc/ssl/bakerlabs/service:ro
+      - ./test:/app:ro
